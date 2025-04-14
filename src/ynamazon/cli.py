@@ -118,6 +118,7 @@ def print_amazon_transactions(
     table.add_column("Item Names", justify="left", style="yellow")
 
     for transaction in transactions:
+        import pdb; pdb.set_trace();
         table.add_row(
             str(transaction.completed_date),
             f"${transaction.transaction_total:.2f}",
