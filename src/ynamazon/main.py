@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.prompt import Confirm
 
@@ -16,7 +15,6 @@ from ynamazon.ynab_transactions import default_configuration as ynab_configurati
 from ynamazon.ynab_transactions import (
     get_ynab_transactions,
     markdown_formatted_link,
-    markdown_formatted_title,
     update_ynab_transaction,
 )
 try:
@@ -28,18 +26,33 @@ if TYPE_CHECKING:
     from ynab import Configuration
 
 
-class MultiLineText(BaseModel):
-    """A class to handle multi-line text."""
+class OrderFormatter:
+    """A class to handle all formatting of orders and items, usually for memo fields in YNAB."""
 
-    lines: list[str] = Field(default_factory=list)
+    def __init__(self, transaction: "AmazonTransactionWithOrderInfo"):
+        """Initialize the OrderFormatter with an Amazon transaction.
+        
+        Args:
+            transaction (AmazonTransactionWithOrderInfo): The Amazon transaction to format.
+        """
+        self._transaction = transaction
 
-    def __str__(self) -> str:
-        """Returns the string representation of the object."""
-        return "\n".join(self.lines)
+    @property
+    def transaction(self) -> "AmazonTransactionWithOrderInfo":
+        """Get the Amazon transaction being formatted.
+        
+        Returns:
+            AmazonTransactionWithOrderInfo: The Amazon transaction.
+        """
+        return self._transaction
 
-    def append(self, line: str) -> None:
-        """Appends a line to the text."""
-        self.lines.append(line)
+    # def __str__(self) -> str:
+    #     """Returns the string representation of the object."""
+    #     return "\n".join(self.lines)
+
+    # def append(self, line: str) -> None:
+    #     """Appends a line to the text."""
+    #     self.lines.append(line)
 
 
 # TODO: reduce complexity of this function
@@ -95,7 +108,7 @@ def process_transactions(  # noqa: C901
             f"[green]Matching Amazon Transaction:[/] {amazon_tran.completed_date} ${amazon_tran.transaction_total:.2f}"
         )
 
-        memo = MultiLineText()
+        memo = OrderFormatter(amazon_tran)
         if amazon_tran.transaction_total != amazon_tran.order_total:
             memo.append(
                 f"-This transaction doesn't represent the entire order. The order total is ${amazon_tran.order_total:.2f}-"
@@ -103,10 +116,13 @@ def process_transactions(  # noqa: C901
         if len(amazon_tran.items) > 1:
             memo.append("**Items**")
             for i, item in enumerate(amazon_tran.items, start=1):
-                memo.append(f"{i}. {markdown_formatted_title(item.title, item.link)}")
+                memo.append(f"{i}. {item.title}")
         elif len(amazon_tran.items) == 1:
             item = amazon_tran.items[0]
-            memo.append(f"- {markdown_formatted_title(item.title, item.link)}")
+            memo.append(item.title)
+
+        # force spacing before order link to ensure bullets format
+        memo.append("")
 
         memo.append(
             markdown_formatted_link(

@@ -163,8 +163,8 @@ def update_ynab_transaction(
     data = PutTransactionWrapper(
         transaction=ExistingTransaction.model_validate(transaction.to_dict())
     )
-
-    # Convert memo to string if it's a MultiLineText object
+    
+    # Convert memo to string if it's an OrderFormatter object
     memo_str = str(memo)
 
     # Ensure memo doesn't exceed 500 character limit
